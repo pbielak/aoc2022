@@ -44,9 +44,10 @@ class Monkey:
             else:
                 destination = self.neg_destination
 
-            target_monkeys[destination].append(
-                new_worry_level % self.divisibility_factors_product
-            )
+            if relief_factor == 1:
+                new_worry_level %= self.divisibility_factors_product
+
+            target_monkeys[destination].append(new_worry_level)
 
         self.items = []
         return target_monkeys, num_inspections
