@@ -68,31 +68,34 @@ def find_distress_beacon_frequency(
     coordinate_min: int,
     coordinate_max: int,
 ) -> int:
-    for sensor, beacon in data:
-        dist = sensor.manhattan(beacon) + 1
+    data_precomputed = [
+        (sensor.x, sensor.y, sensor.manhattan(beacon))
+        for sensor, beacon in data
+    ]
 
-        outside_border_points = []
+    for sensor_x, sensor_y, dist in data_precomputed:
+        dist = dist + 1
+
         for d in range(dist + 1):
-            outside_border_points.extend([
-                Point(sensor.x + d, sensor.y + dist - d),
-                Point(sensor.x + d, sensor.y - (dist - d)),
-                Point(sensor.x - d, sensor.y + dist - d),
-                Point(sensor.x - d, sensor.y - (dist - d)),
-            ])
+            for obp_x, obp_y in [
+                (sensor_x + d, sensor_y + dist - d),
+                (sensor_x + d, sensor_y - (dist - d)),
+                (sensor_x - d, sensor_y + dist - d),
+                (sensor_x - d, sensor_y - (dist - d)),
+            ]:
+                if obp_x < coordinate_min or obp_x > coordinate_max:
+                    continue
 
-        for obp in outside_border_points:
-            if obp.x < coordinate_min or obp.x > coordinate_max:
-                continue
+                if obp_y < coordinate_min or obp_y > coordinate_max:
+                    continue
 
-            if obp.y < coordinate_min or obp.y > coordinate_max:
-                continue
+                if any(
+                    abs(o_sensor_x - obp_x) + abs(o_sensor_y - obp_y) <= o_dist
+                    for o_sensor_x, o_sensor_y, o_dist in data_precomputed
+                ):
+                    continue
 
-            if all(
-                other_sensor.manhattan(obp) > other_sensor.manhattan(other_beacon)
-                for other_sensor, other_beacon in data
-                if other_sensor != sensor
-            ):
-                return obp.x * 4_000_000 + obp.y
+                return obp_x * 4_000_000 + obp_y
 
 
 def main():
@@ -108,6 +111,7 @@ def main():
         data = read_data(path)
 
         solution_one = len(get_impossible_positions_at_y(data, y=2_000_000))
+
         solution_two = find_distress_beacon_frequency(
             data=data,
             coordinate_min=0,
